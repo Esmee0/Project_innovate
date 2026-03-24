@@ -1,31 +1,53 @@
-<!doctype html>
-<html>
-  <head><meta charset="utf-8"><title>Dashboard</title></head>
-  <body>
-    <h1>Dashboard</h1>
-    <p>Welcome {{ username }}!</p>
-    <h2>Your assignments</h2>
+{% extends "base.html" %}
 
-{% if assignments %}
-  <ul>
-    {% for a in assignments %}
-      <li>
-        <strong>{{ a.title }}</strong>
-        — {{ a.start_date }} → {{ a.due_date }}
-        — {{ "%.1f"|format(a.total_hours) }} hours
-      </li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>No assignments yet.</p>
-{% endif %}
+{% block title %}Dashboard{% endblock %}
 
-<p><a href="{{ url_for('new_assignment') }}">+ New assignment</a></p>
+{% block content %}
+  <h1>Dashboard</h1>
+  <p class="muted">Manage your assignments. You can only edit/delete your own assignments.</p>
 
-  
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('new_assignment') }}">+ New assignment</a>
+  </div>
 
-    <form method="post" action="{{ url_for('logout') }}">
-      <button type="submit">Logout</button>
-    </form>
-  </body>
-</html>
+  <h2 style="margin-top:16px;">Your assignments</h2>
+
+  {% if assignments %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Start</th>
+          <th>Due</th>
+          <th>Total hours</th>
+          <th style="width:220px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assignments %}
+          <tr>
+            <td><strong>{{ a.title }}</strong></td>
+            <td>{{ a.start_date }}</td>
+            <td>{{ a.due_date }}</td>
+            <td>{{ "%.1f"|format(a.total_hours) }}</td>
+            <td>
+              <a class="btn" href="{{ url_for('edit_assignment', assignment_id=a.id) }}">Edit</a>
+
+              <form method="post"
+                    action="{{ url_for('delete_assignment', assignment_id=a.id) }}"
+                    style="display:inline;margin:0;">
+                <button class="btn btn-danger"
+                        type="submit"
+                        onclick="return confirm('Delete this assignment?');">
+                  Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No assignments yet. Click “New assignment”.</p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Edit assignment{% endblock %}
+
+{% block content %}
+  <h1>Edit assignment</h1>
+  <p class="muted">Update the fields and save.</p>
+
+  <form method="post">
+    <p>
+      <label>Title<br>
+        <input name="title" required value="{{ assignment.title }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+      </label>
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <p>
+        <label>Start date<br>
+          <input type="date" name="start_date" required value="{{ assignment.start_date }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+        </label>
+      </p>
+
+      <p>
+        <label>Due date<br>
+          <input type="date" name="due_date" required value="{{ assignment.due_date }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+        </label>
+      </p>
+    </div>
+
+    <p>
+      <label>Total hours needed<br>
+        <input type="number" name="total_hours" step="0.5" min="0" required value="{{ assignment.total_hours }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+      </label>
+    </p>
+
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Save changes</button>
+      <a class="btn" href="{{ url_for('dashboard') }}">Back</a>
+    </div>
+  </form>
+{% endblock %}

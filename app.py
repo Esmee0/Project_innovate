@@ -163,6 +163,66 @@ def new_assignment():
 
     return render_template("new_assignment.html")
 
+@app.route("/assignments/<int:assignment_id>/delete", methods=["POST"])
+@login_required
+def delete_assignment(assignment_id):
+    a = Assignment.query.get_or_404(assignment_id)
+
+    # Security: only delete your own assignments
+    if a.user_id != current_user.id:
+        flash("You are not allowed to delete this assignment.")
+        return redirect(url_for("dashboard"))
+
+    db.session.delete(a)
+    db.session.commit()
+    flash("Assignment deleted.")
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/assignments/<int:assignment_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_assignment(assignment_id):
+    a = Assignment.query.get_or_404(assignment_id)
+
+    # Security: only edit your own assignments
+    if a.user_id != current_user.id:
+        flash("You are not allowed to edit this assignment.")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        start_date_raw = request.form.get("start_date") or ""
+        due_date_raw = request.form.get("due_date") or ""
+        total_hours_raw = (request.form.get("total_hours") or "").strip().replace(",", ".")
+
+        if not title:
+            flash("Title is required.")
+            return render_template("edit_assignment.html", assignment=a)
+
+        try:
+            a.start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+            a.due_date = datetime.strptime(due_date_raw, "%Y-%m-%d").date()
+            a.total_hours = float(total_hours_raw)
+        except ValueError:
+            flash("Invalid input. Check dates and hours.")
+            return render_template("edit_assignment.html", assignment=a)
+
+        a.title = title
+
+        if a.due_date < a.start_date:
+            flash("Due date must be after start date.")
+            return render_template("edit_assignment.html", assignment=a)
+
+        if a.total_hours <= 0:
+            flash("Total hours must be greater than 0.")
+            return render_template("edit_assignment.html", assignment=a)
+
+        db.session.commit()
+        flash("Assignment updated.")
+        return redirect(url_for("dashboard"))
+
+    return render_template("edit_assignment.html", assignment=a)
+
 
 if __name__ == "__main__":
     with app.app_context():
