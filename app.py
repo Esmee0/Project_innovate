@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -19,7 +20,6 @@ app.config["SECRET_KEY"] = "dev-change-me"
 # Always store the SQLite DB next to this file (stable path)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "app.db")
-
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -34,6 +34,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
+    def __repr__(self):
+        return f"<User id={self.id} username={self.username!r}>"
+
 
 class Assignment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,10 +47,40 @@ class Assignment(db.Model):
     due_date = db.Column(db.Date, nullable=False)
     total_hours = db.Column(db.Float, nullable=False)
 
+    def __repr__(self):
+        return f"<Assignment id={self.id} title={self.title!r} user_id={self.user_id}>"
+
 
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+def build_schedule(assignments):
+    """
+    Returns a dict: {date_obj: [(assignment, hours_for_that_day), ...]}
+    Hours are evenly distributed from start_date to due_date (inclusive).
+    """
+    schedule = defaultdict(list)
+
+    for a in assignments:
+        # Safety checks
+        if not a.start_date or not a.due_date or a.total_hours is None:
+            continue
+        if a.due_date < a.start_date:
+            continue
+        if a.total_hours <= 0:
+            continue
+
+        days = (a.due_date - a.start_date).days + 1  # inclusive
+        hours_per_day = a.total_hours / days
+
+        d = a.start_date
+        while d <= a.due_date:
+            schedule[d].append((a, hours_per_day))
+            d += timedelta(days=1)
+
+    return dict(sorted(schedule.items(), key=lambda x: x[0]))
 
 
 @app.route("/")
@@ -119,6 +152,20 @@ def dashboard():
     )
 
 
+@app.route("/schedule")
+@login_required
+def schedule():
+    assignments = (
+        Assignment.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Assignment.due_date.asc())
+        .all()
+    )
+
+    schedule_map = build_schedule(assignments)
+    return render_template("schedule.html", schedule_map=schedule_map)
+
+
 @app.route("/assignments/new", methods=["GET", "POST"])
 @login_required
 def new_assignment():
@@ -162,6 +209,7 @@ def new_assignment():
         return redirect(url_for("dashboard"))
 
     return render_template("new_assignment.html")
+
 
 @app.route("/assignments/<int:assignment_id>/delete", methods=["POST"])
 @login_required

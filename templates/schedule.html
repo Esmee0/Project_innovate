@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule{% endblock %}
+
+{% block content %}
+  <h1>Schedule</h1>
+  <p class="muted">
+    This schedule evenly divides total hours across each day from start to due date (inclusive).
+  </p>
+
+  <div class="actions">
+    <a class="btn" href="{{ url_for('dashboard') }}">Back to dashboard</a>
+  </div>
+
+  {% if schedule_map %}
+    <table class="table" style="margin-top:12px;">
+      <thead>
+        <tr>
+          <th style="width:160px;">Date</th>
+          <th>Plan</th>
+          <th style="width:140px;">Total hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for day, items in schedule_map.items() %}
+          <tr>
+            <td><strong>{{ day }}</strong></td>
+            <td>
+              <ul style="margin:0;padding-left:18px;">
+                {% for a, h in items %}
+                  <li>
+                    <strong>{{ a.title }}</strong> — {{ "%.2f"|format(h) }} h
+                    <span class="muted">(due {{ a.due_date }})</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>
+              {% set total = namespace(v=0) %}
+              {% for a, h in items %}
+                {% set total.v = total.v + h %}
+              {% endfor %}
+              <strong>{{ "%.2f"|format(total.v) }}</strong>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No assignments yet, so there’s no schedule.</p>
+  {% endif %}
+{% endblock %}
