@@ -4,6 +4,25 @@
   <body>
     <h1>Dashboard</h1>
     <p>Welcome {{ username }}!</p>
+    <h2>Your assignments</h2>
+
+{% if assignments %}
+  <ul>
+    {% for a in assignments %}
+      <li>
+        <strong>{{ a.title }}</strong>
+        — {{ a.start_date }} → {{ a.due_date }}
+        — {{ "%.1f"|format(a.total_hours) }} hours
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No assignments yet.</p>
+{% endif %}
+
+<p><a href="{{ url_for('new_assignment') }}">+ New assignment</a></p>
+
+  
 
     <form method="post" action="{{ url_for('logout') }}">
       <button type="submit">Logout</button>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>New assignment</title></head>
+  <body>
+    <h1>New assignment</h1>
+
+    {% for m in get_flashed_messages() %}
+      <p style="color:red;">{{ m }}</p>
+    {% endfor %}
+
+    <form method="post">
+      <p>
+        <label>Title<br>
+          <input name="title" required>
+        </label>
+      </p>
+
+      <p>
+        <label>Start date<br>
+          <input type="date" name="start_date" required>
+        </label>
+      </p>
+
+      <p>
+        <label>Due date<br>
+          <input type="date" name="due_date" required>
+        </label>
+      </p>
+
+      <p>
+        <label>Total hours needed<br>
+          <input type="number" name="total_hours" step="0.5" min="0" required>
+        </label>
+      </p>
+
+      <button type="submit">Save</button>
+    </form>
+
+    <p><a href="{{ url_for('dashboard') }}">Back to dashboard</a></p>
+  </body>
+</html>
