@@ -5,7 +5,7 @@
 {% block content %}
   <h1>Schedule</h1>
   <p class="muted">
-    This schedule evenly divides total hours across each day from start to due date (inclusive).
+    Per day overview. Tick an item when done. Remaining hours will be redistributed automatically.
   </p>
 
   <div class="actions">
@@ -13,39 +13,62 @@
   </div>
 
   {% if schedule_map %}
-    <table class="table" style="margin-top:12px;">
-      <thead>
-        <tr>
-          <th style="width:160px;">Date</th>
-          <th>Plan</th>
-          <th style="width:140px;">Total hours</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for day, items in schedule_map.items() %}
-          <tr>
-            <td><strong>{{ day }}</strong></td>
-            <td>
-              <ul style="margin:0;padding-left:18px;">
-                {% for a, h in items %}
-                  <li>
-                    <strong>{{ a.title }}</strong> — {{ "%.2f"|format(h) }} h
-                    <span class="muted">(due {{ a.due_date }})</span>
-                  </li>
-                {% endfor %}
-              </ul>
-            </td>
-            <td>
-              {% set total = namespace(v=0) %}
-              {% for a, h in items %}
-                {% set total.v = total.v + h %}
-              {% endfor %}
-              <strong>{{ "%.2f"|format(total.v) }}</strong>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px;margin-top:12px;">
+      {% for day, items in schedule_map.items() %}
+        <div class="panel" style="background:#ffffff;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
+            <div>
+              <div style="font-weight:800;font-size:16px;">{{ day|dmy }}</div>
+              <div class="muted" style="font-size:13px;">
+                {% set weekday_names = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] %}
+                {{ weekday_names[day.weekday()] }}
+              </div>
+            </div>
+
+            {# total planned hours for this day #}
+            {% set total = namespace(v=0) %}
+            {% for item in items %}
+              {% set total.v = total.v + item.planned_hours %}
+            {% endfor %}
+            <span class="badge"><strong>{{ "%.2f"|format(total.v) }}</strong> h</span>
+          </div>
+
+          <hr style="border:none;border-top:1px solid rgba(15,23,42,.10);margin:10px 0;">
+
+          <ul style="margin:0;padding-left:18px;">
+            {% for item in items %}
+              {% set a = item.assignment %}
+              <li style="margin:8px 0;">
+                <div style="font-weight:800;">{{ a.title }}</div>
+
+                <div class="muted" style="font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                  <span>
+                    planned: <strong>{{ "%.2f"|format(item.planned_hours) }}</strong> h
+                    • due {{ a.due_date|dmy }}
+                    • <a href="{{ url_for('edit_assignment', assignment_id=a.id) }}">edit</a>
+                  </span>
+
+                  <form method="post" action="{{ url_for('schedule_toggle') }}" style="margin:0;">
+                    <input type="hidden" name="assignment_id" value="{{ a.id }}">
+                    <input type="hidden" name="work_date" value="{{ day.strftime('%Y-%m-%d') }}">
+
+                    {% if item.done %}
+                      <input type="hidden" name="action" value="uncheck">
+                      <button class="btn" type="submit">Undo ({{ "%.2f"|format(item.done_hours) }}h)</button>
+                    {% else %}
+                      <input type="hidden" name="action" value="check">
+                      <button class="btn btn-primary" type="submit" {% if item.planned_hours <= 0 %}disabled{% endif %}>
+                        Done
+                      </button>
+                    {% endif %}
+                  </form>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </div>
   {% else %}
     <p class="muted">No assignments yet, so there’s no schedule.</p>
   {% endif %}

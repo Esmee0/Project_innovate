@@ -28,8 +28,8 @@
         {% for a in assignments %}
           <tr>
             <td><strong>{{ a.title }}</strong></td>
-            <td>{{ a.start_date }}</td>
-            <td>{{ a.due_date }}</td>
+            <td>{{ a.start_date|dmy }}</td>
+            <td>{{ a.due_date|dmy }}</td>
             <td>{{ "%.1f"|format(a.total_hours) }}</td>
             <td>
               <a class="btn" href="{{ url_for('edit_assignment', assignment_id=a.id) }}">Edit</a>

@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 from datetime import datetime, timedelta
+from datetime import date
 
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -28,6 +29,16 @@ login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.init_app(app)
 
+@app.template_filter("dmy")
+def format_dmy(value):
+    """Format a date/datetime as dd/mm/yy for templates."""
+    if value is None:
+        return ""
+    # If it's a datetime, take the date part
+    if isinstance(value, datetime):
+        value = value.date()
+    return value.strftime("%d/%m/%y")
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,6 +60,25 @@ class Assignment(db.Model):
 
     def __repr__(self):
         return f"<Assignment id={self.id} title={self.title!r} user_id={self.user_id}>"
+    
+class WorkLog(db.Model):
+    __tablename__ = "work_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    assignment_id = db.Column(db.Integer, db.ForeignKey("assignment.id"), nullable=False)
+    work_date = db.Column(db.Date, nullable=False)
+
+    # For this project we log "done hours" for that day.
+    hours_done = db.Column(db.Float, nullable=False, default=0.0)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "assignment_id", "work_date", name="uq_worklog_user_assignment_date"),
+    )
+
+    def __repr__(self):
+        return f"<WorkLog assignment_id={self.assignment_id} date={self.work_date} hours_done={self.hours_done}>"
 
 
 @login_manager.user_loader
@@ -58,9 +88,15 @@ def load_user(user_id):
 
 def build_schedule(assignments):
     """
-    Returns a dict: {date_obj: [(assignment, hours_for_that_day), ...]}
-    Hours are evenly distributed from start_date to due_date (inclusive).
+    Returns dict:
+      {day: [{"assignment": a, "planned_hours": x, "done": True/False, "done_hours": y}, ...]}
+
+    Behavior:
+    - Planned hours are evenly distributed across days.
+    - If you mark a day as done, that day's planned hours become 0 remaining and won't be planned again.
+    - Remaining hours are re-distributed across remaining (not-done) days between today..due_date.
     """
+    today = date.today()
     schedule = defaultdict(list)
 
     for a in assignments:
@@ -72,12 +108,53 @@ def build_schedule(assignments):
         if a.total_hours <= 0:
             continue
 
-        days = (a.due_date - a.start_date).days + 1  # inclusive
-        hours_per_day = a.total_hours / days
+        # Load all worklogs for this assignment (current user only)
+        logs = (
+            WorkLog.query
+            .filter_by(user_id=current_user.id, assignment_id=a.id)
+            .all()
+        )
+        done_by_date = {wl.work_date: wl.hours_done for wl in logs if wl.hours_done and wl.hours_done > 0}
 
+        total_done = sum(done_by_date.values())
+        remaining_total = max(0.0, a.total_hours - total_done)
+
+        # Days we consider for planning:
+        # - from max(start_date, today) to due_date
+        plan_start = max(a.start_date, today)
+        plan_end = a.due_date
+
+        # If assignment already ended, still show historical days if they exist in schedule_map
+        # but we won't plan remaining hours past due_date.
+        remaining_days = []
+        d = plan_start
+        while d <= plan_end:
+            # If user already logged work on that day, treat it as done (no new planned hours)
+            if d not in done_by_date:
+                remaining_days.append(d)
+            d += timedelta(days=1)
+
+        hours_per_remaining_day = (remaining_total / len(remaining_days)) if remaining_days else 0.0
+
+        # Build schedule entries for all days between start and due (inclusive), but
+        # show only days from start..due where we might want to view/checkbox.
         d = a.start_date
         while d <= a.due_date:
-            schedule[d].append((a, hours_per_day))
+            done_hours = done_by_date.get(d, 0.0)
+            is_done = done_hours > 0
+
+            planned = 0.0
+            if d in remaining_days:
+                planned = hours_per_remaining_day
+
+            schedule[d].append(
+                {
+                    "assignment": a,
+                    "planned_hours": planned,
+                    "done": is_done,
+                    "done_hours": done_hours,
+                }
+            )
             d += timedelta(days=1)
 
     return dict(sorted(schedule.items(), key=lambda x: x[0]))
@@ -86,6 +163,62 @@ def build_schedule(assignments):
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.route("/schedule/toggle", methods=["POST"])
+@login_required
+def schedule_toggle():
+    assignment_id = int(request.form.get("assignment_id"))
+    work_date_raw = request.form.get("work_date") or ""  # expects YYYY-MM-DD from hidden input
+    action = request.form.get("action") or "check"
+
+    a = Assignment.query.get_or_404(assignment_id)
+    if a.user_id != current_user.id:
+        flash("Not allowed.")
+        return redirect(url_for("schedule"))
+
+    try:
+        work_date_val = datetime.strptime(work_date_raw, "%Y-%m-%d").date()
+    except ValueError:
+        flash("Invalid date.")
+        return redirect(url_for("schedule"))
+
+    # Compute what the "planned" hours should be right now for that day,
+    # so checking it will log that amount.
+    schedule_map = build_schedule([a])
+    day_items = schedule_map.get(work_date_val, [])
+    planned_hours = 0.0
+    for item in day_items:
+        if item["assignment"].id == a.id:
+            planned_hours = float(item["planned_hours"])
+            break
+
+    wl = (
+        WorkLog.query
+        .filter_by(user_id=current_user.id, assignment_id=a.id, work_date=work_date_val)
+        .first()
+    )
+
+    if action == "uncheck":
+        if wl:
+            db.session.delete(wl)
+            db.session.commit()
+        return redirect(url_for("schedule"))
+
+    # action == "check"
+    if planned_hours <= 0:
+        # If there's nothing planned (e.g. already done or outside planning window),
+        # we still allow a tiny log, but better to block to avoid weirdness.
+        flash("Nothing to check off for that day.")
+        return redirect(url_for("schedule"))
+
+    if not wl:
+        wl = WorkLog(user_id=current_user.id, assignment_id=a.id, work_date=work_date_val, hours_done=planned_hours)
+        db.session.add(wl)
+    else:
+        wl.hours_done = planned_hours  # overwrite with current planned
+    db.session.commit()
+
+    return redirect(url_for("schedule"))
 
 
 @app.route("/register", methods=["GET", "POST"])
