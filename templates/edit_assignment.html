@@ -9,27 +9,27 @@
   <form method="post">
     <p>
       <label>Title<br>
-        <input name="title" required value="{{ assignment.title }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+        <input type="text" name="title" required value="{{ assignment.title }}">
       </label>
     </p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <p>
         <label>Start date<br>
-          <input type="date" name="start_date" required value="{{ assignment.start_date }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+          <input type="date" name="start_date" required value="{{ assignment.start_date }}">
         </label>
       </p>
 
       <p>
         <label>Due date<br>
-          <input type="date" name="due_date" required value="{{ assignment.due_date }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+          <input type="date" name="due_date" required value="{{ assignment.due_date }}">
         </label>
       </p>
     </div>
 
     <p>
       <label>Total hours needed<br>
-        <input type="number" name="total_hours" step="0.5" min="0" required value="{{ assignment.total_hours }}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;">
+        <input type="number" name="total_hours" step="0.5" min="0" required value="{{ assignment.total_hours }}">
       </label>
     </p>
 

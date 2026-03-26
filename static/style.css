@@ -166,3 +166,27 @@ input:focus{
   box-shadow: 0 0 0 4px rgba(37,99,235,.12);
 }
 label{ font-weight: 700; }
+
+/* Make panels stand out on light-blue background */
+.panel{
+  background: #e8f4ff;               /* light blue panel */
+  border: 1px solid rgba(37,99,235,.18);
+}
+
+/* Force form fields to be white (so they pop) */
+input[type="text"], input[type="date"], input[type="number"], input[type="password"]{
+  background: #ffffff !important;
+}
+
+/* A small centered card (nice for login/register) */
+.auth-wrap{
+  max-width: 420px;
+  margin: 0 auto;
+}
+.auth-card{
+  background: #ffffff;
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 12px 30px rgba(2,132,199,.10);
+}
