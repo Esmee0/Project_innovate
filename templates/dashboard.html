@@ -13,24 +13,50 @@
 
   <h2 style="margin-top:16px;">Your assignments</h2>
 
-  {% if assignments %}
+  {% if assignment_views %}
     <table class="table">
       <thead>
         <tr>
           <th>Title</th>
           <th>Start</th>
           <th>Due</th>
-          <th>Total hours</th>
+          <th>Status</th>
+          <th>Progress</th>
           <th style="width:220px;">Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for a in assignments %}
+        {% for v in assignment_views %}
+          {% set a = v.assignment %}
           <tr>
             <td><strong>{{ a.title }}</strong></td>
             <td>{{ a.start_date|dmy }}</td>
             <td>{{ a.due_date|dmy }}</td>
-            <td>{{ "%.1f"|format(a.total_hours) }}</td>
+
+            <td>
+              {% if v.status == "overdue" %}
+                <span class="badge badge-overdue">Overdue ({{ v.days_left }}d)</span>
+              {% elif v.status == "due_soon" %}
+                <span class="badge badge-due-soon">Due soon ({{ v.days_left }}d)</span>
+              {% else %}
+                <span class="badge badge-ok">OK ({{ v.days_left }}d)</span>
+              {% endif %}
+            </td>
+
+            <td>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <div class="progress" style="flex:1;">
+                  <div style="width: {{ "%.0f"|format(v.progress) }}%;"></div>
+                </div>
+                <span class="muted" style="white-space:nowrap;">
+                  {{ "%.0f"|format(v.progress) }}%
+                </span>
+              </div>
+              <div class="muted" style="font-size:12px;margin-top:4px;">
+                {{ "%.1f"|format(v.done_hours) }} / {{ "%.1f"|format(a.total_hours) }} h
+              </div>
+            </td>
+
             <td>
               <a class="btn" href="{{ url_for('edit_assignment', assignment_id=a.id) }}">Edit</a>
 

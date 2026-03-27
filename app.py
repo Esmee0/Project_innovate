@@ -159,6 +159,23 @@ def build_schedule(assignments):
 
     return dict(sorted(schedule.items(), key=lambda x: x[0]))
 
+def assignment_done_hours(assignment_id):
+    total = (
+        db.session.query(db.func.coalesce(db.func.sum(WorkLog.hours_done), 0.0))
+        .filter(WorkLog.user_id == current_user.id, WorkLog.assignment_id == assignment_id)
+        .scalar()
+    )
+    return float(total or 0.0)
+
+def assignment_status(due_date, today=None):
+    today = today or date.today()
+    days_left = (due_date - today).days
+    if days_left < 0:
+        return "overdue", days_left
+    if days_left <= 3:
+        return "due_soon", days_left
+    return "ok", days_left
+
 
 @app.route("/")
 def home():
@@ -280,10 +297,35 @@ def dashboard():
         .order_by(Assignment.due_date.asc())
         .all()
     )
+
+    today = date.today()
+
+    # Build a small view-model list with status + progress
+    assignment_views = []
+    for a in assignments:
+        done_hours = assignment_done_hours(a.id)
+        progress = 0.0
+        if a.total_hours > 0:
+            progress = min(100.0, (done_hours / a.total_hours) * 100.0)
+
+        status, days_left = assignment_status(a.due_date, today=today)
+
+        assignment_views.append(
+            {
+                "assignment": a,
+                "done_hours": done_hours,
+                "progress": progress,
+                "status": status,
+                "days_left": days_left,
+            }
+        )
+
     return render_template(
         "dashboard.html",
         username=current_user.username,
-        assignments=assignments,
+        assignments=assignments,          # keep if you still use it elsewhere
+        assignment_views=assignment_views,
+        today=today,
     )
 
 
@@ -298,6 +340,11 @@ def schedule():
     )
 
     schedule_map = build_schedule(assignments)
+
+    # Hide past days
+    today = date.today()
+    schedule_map = {d: items for d, items in schedule_map.items() if d >= today}
+
     return render_template("schedule.html", schedule_map=schedule_map)
 
 
