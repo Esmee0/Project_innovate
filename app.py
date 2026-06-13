@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 from datetime import datetime, timedelta
 from datetime import date
+from ai_predictor import predictor
 
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -452,6 +453,44 @@ def edit_assignment(assignment_id):
         return redirect(url_for("dashboard"))
 
     return render_template("edit_assignment.html", assignment=a)
+
+@app.route("/assignments/<int:assignment_id>/edit", methods=["GET", "POST"])
+@login_required
+def predict_duration():
+    try:
+        data = request.get_json()
+        title = data.get("title", "")
+        start_date_str = data.get("start_date", "")
+        due_date_str = data.get("due_date", "")
+
+        if not title or not start_date_str or not due_date_str:
+            return {"error": "Missing data"}, 400
+        
+        start_date = datetime.strptime(start_date_str, %Y-%m-%d").date()
+        due_date = datetime.strptime(due_date_str, %Y-%m-%d").date()
+        
+        assignments = Assignments.query.filter_by(user_id=current_user.id).all()
+        worklogs = Worklog.query.filter_by(user_id=current_user.id).all()
+
+        predictor.train(assignmentsm worlklogs)
+
+        predicted_hours = predictor.predict(title, start_date, due_date)
+
+        if predicted_hours is None:
+            return{
+                "error": "not enough data to make prediction",
+                "suggestion": "Complete some assignments first!"
+            }, 400
+
+        return {
+            "predicted_hours": round(precited_hours, 1),
+            "message": f"AI predicts around {round(predicted_hours, 1)} hour"
+        }, 200
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+
 
 
 if __name__ == "__main__":
