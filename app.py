@@ -242,6 +242,7 @@ def schedule_toggle():
 
 
 @app.route("/register", methods=["GET", "POST"])
+@login_required
 def register():
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
@@ -454,43 +455,43 @@ def edit_assignment(assignment_id):
 
     return render_template("edit_assignment.html", assignment=a)
 
-@app.route("/assignments/<int:assignment_id>/edit", methods=["GET", "POST"])
+
+@app.route("/ai/predict-duration", methods=["POST"])
 @login_required
 def predict_duration():
+    """API endpoint voor AI duration prediction"""
     try:
         data = request.get_json()
         title = data.get("title", "")
         start_date_str = data.get("start_date", "")
         due_date_str = data.get("due_date", "")
-
+        
         if not title or not start_date_str or not due_date_str:
             return {"error": "Missing data"}, 400
         
         start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
         due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
         
-        assignments = Assignments.query.filter_by(user_id=current_user.id).all()
-        worklogs = Worklog.query.filter_by(user_id=current_user.id).all()
-
+        assignments = Assignment.query.filter_by(user_id=current_user.id).all()
+        worklogs = WorkLog.query.filter_by(user_id=current_user.id).all()
+        
         predictor.train(assignments, worklogs)
-
+        
         predicted_hours = predictor.predict(title, start_date, due_date)
-
+        
         if predicted_hours is None:
-            return{
-                "error": "not enough data to make prediction",
+            return {
+                "error": "Not enough data to make prediction",
                 "suggestion": "Complete some assignments first!"
             }, 400
-
+        
         return {
-            "predicted_hours": round(precited_hours, 1),
-            "message": f"AI predicts around {round(predicted_hours, 1)} hour"
+            "predicted_hours": round(predicted_hours, 1),
+            "message": f"AI voorspelt ongeveer {round(predicted_hours, 1)} uur"
         }, 200
-
+    
     except Exception as e:
         return {"error": str(e)}, 500
-    
-
 
 
 if __name__ == "__main__":
