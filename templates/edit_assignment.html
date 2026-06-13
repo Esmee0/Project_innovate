@@ -6,31 +6,36 @@
   <h1>Edit assignment</h1>
   <p class="muted">Update the fields and save.</p>
 
-  <form method="post">
+  <form method="post" id="assignmentForm">
     <p>
       <label>Title<br>
-        <input type="text" name="title" required value="{{ assignment.title }}">
+        <input type="text" name="title" id="title" required value="{{ assignment.title }}">
       </label>
     </p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <p>
         <label>Start date<br>
-          <input type="date" name="start_date" required value="{{ assignment.start_date }}">
+          <input type="date" name="start_date" id="start_date" required value="{{ assignment.start_date }}">
         </label>
       </p>
 
       <p>
         <label>Due date<br>
-          <input type="date" name="due_date" required value="{{ assignment.due_date }}">
+          <input type="date" name="due_date" id="due_date" required value="{{ assignment.due_date }}">
         </label>
       </p>
     </div>
 
     <p>
       <label>Total hours needed<br>
-        <input type="number" name="total_hours" step="0.5" min="0" required value="{{ assignment.total_hours }}">
+        <input type="number" name="total_hours" id="total_hours" step="0.5" min="0" required value="{{ assignment.total_hours }}">
       </label>
+      <!-- AI Estimate knop -->
+      <button type="button" class="btn" id="aiEstimateBtn" style="margin-top: 8px;">
+        💡 AI Estimate
+      </button>
+      <div id="aiResult" style="margin-top: 8px; font-size: 14px; color: #0b3a75;"></div>
     </p>
 
     <div class="actions">
@@ -38,4 +43,57 @@
       <a class="btn" href="{{ url_for('dashboard') }}">Back</a>
     </div>
   </form>
+
+  <script>
+    // Wanneer gebruiker op "AI Estimate" klikt
+    document.getElementById('aiEstimateBtn').addEventListener('click', async function() {
+      const title = document.getElementById('title').value;
+      const start_date = document.getElementById('start_date').value;
+      const due_date = document.getElementById('due_date').value;
+      const resultDiv = document.getElementById('aiResult');
+
+      // Controleer of alle velden ingevuld zijn
+      if (!title || !start_date || !due_date) {
+        resultDiv.innerHTML = 'Fill in title, start date, and due date first!';
+        resultDiv.style.color = '#dc2626';
+        return;
+      }
+
+      // Laat loading state zien
+      resultDiv.innerHTML = 'AI is thinking...';
+      resultDiv.style.color = '#2563eb';
+
+      try {
+        // Stuur een POST request naar onze AI endpoint
+        const response = await fetch('{{ url_for("predict_duration") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: title,
+            start_date: start_date,
+            due_date: due_date
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Success! Vul de hours field in
+          const predicted = data.predicted_hours;
+          document.getElementById('total_hours').value = predicted;
+          resultDiv.innerHTML = `${data.message}`;
+          resultDiv.style.color = '#15803d';
+        } else {
+          // Error van de AI
+          resultDiv.innerHTML = `${data.error}`;
+          resultDiv.style.color = '#dc2626';
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.style.color = '#dc2626';
+      }
+    });
+  </script>
 {% endblock %}
