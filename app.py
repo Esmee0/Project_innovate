@@ -466,13 +466,13 @@ def predict_duration():
         if not title or not start_date_str or not due_date_str:
             return {"error": "Missing data"}, 400
         
-        start_date = datetime.strptime(start_date_str, %Y-%m-%d").date()
-        due_date = datetime.strptime(due_date_str, %Y-%m-%d").date()
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
         
         assignments = Assignments.query.filter_by(user_id=current_user.id).all()
         worklogs = Worklog.query.filter_by(user_id=current_user.id).all()
 
-        predictor.train(assignmentsm worlklogs)
+        predictor.train(assignments, worklogs)
 
         predicted_hours = predictor.predict(title, start_date, due_date)
 
