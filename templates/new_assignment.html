@@ -45,26 +45,23 @@
   </form>
 
   <script>
-    // the AI function
+    // AI Estimate functionality
     document.getElementById('aiEstimateBtn').addEventListener('click', async function() {
       const title = document.getElementById('title').value;
       const start_date = document.getElementById('start_date').value;
       const due_date = document.getElementById('due_date').value;
       const resultDiv = document.getElementById('aiResult');
 
-      
       if (!title || !start_date || !due_date) {
-        resultDiv.innerHTML = 'Fill in title, start date, and due date first!';
+        resultDiv.innerHTML = '⚠️ Fill in title, start date, and due date first!';
         resultDiv.style.color = '#dc2626';
         return;
       }
 
-      
-      resultDiv.innerHTML = 'AI is thinking...';
+      resultDiv.innerHTML = '⏳ AI is thinking...';
       resultDiv.style.color = '#2563eb';
 
       try {
-        
         const response = await fetch('{{ url_for("predict_duration") }}', {
           method: 'POST',
           headers: {
@@ -80,18 +77,16 @@
         const data = await response.json();
 
         if (response.ok) {
-          
           const predicted = data.predicted_hours;
           document.getElementById('total_hours').value = predicted;
-          resultDiv.innerHTML = `${data.message}`;
+          resultDiv.innerHTML = `✅ ${data.message}`;
           resultDiv.style.color = '#15803d';
         } else {
-          // Error van de AI
-          resultDiv.innerHTML = `${data.error}`;
+          resultDiv.innerHTML = `⚠️ ${data.error}`;
           resultDiv.style.color = '#dc2626';
         }
       } catch (error) {
-        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.innerHTML = `❌ Error: ${error.message}`;
         resultDiv.style.color = '#dc2626';
       }
     });

@@ -19,7 +19,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "dev-change-me"
 
-# Always store the SQLite DB next to this file (stable path)
+# Always store the SQLite DB next to this file 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "app.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -242,7 +242,6 @@ def schedule_toggle():
 
 
 @app.route("/register", methods=["GET", "POST"])
-@login_required
 def register():
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
@@ -455,7 +454,6 @@ def edit_assignment(assignment_id):
 
     return render_template("edit_assignment.html", assignment=a)
 
-
 @app.route("/ai/predict-duration", methods=["POST"])
 @login_required
 def predict_duration():
@@ -487,11 +485,13 @@ def predict_duration():
         
         return {
             "predicted_hours": round(predicted_hours, 1),
-            "message": f"AI voorspelt ongeveer {round(predicted_hours, 1)} uur"
+            "message": f"AI predicts around {round(predicted_hours, 1)} hour"
         }, 200
     
     except Exception as e:
         return {"error": str(e)}, 500
+    
+
 
 
 if __name__ == "__main__":

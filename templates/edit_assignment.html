@@ -16,13 +16,13 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <p>
         <label>Start date<br>
-          <input type="date" name="start_date" id="start_date" required value="{{ assignment.start_date }}">
+          <input type="date" name="start_date" id="start_date" required value="{{ assignment.start_date.isoformat() }}">
         </label>
       </p>
 
       <p>
         <label>Due date<br>
-          <input type="date" name="due_date" id="due_date" required value="{{ assignment.due_date }}">
+          <input type="date" name="due_date" id="due_date" required value="{{ assignment.due_date.isoformat() }}">
         </label>
       </p>
     </div>
@@ -45,26 +45,23 @@
   </form>
 
   <script>
-    // Wanneer gebruiker op "AI Estimate" klikt
+    // AI Estimate functionality
     document.getElementById('aiEstimateBtn').addEventListener('click', async function() {
       const title = document.getElementById('title').value;
       const start_date = document.getElementById('start_date').value;
       const due_date = document.getElementById('due_date').value;
       const resultDiv = document.getElementById('aiResult');
 
-      // Controleer of alle velden ingevuld zijn
       if (!title || !start_date || !due_date) {
-        resultDiv.innerHTML = 'Fill in title, start date, and due date first!';
+        resultDiv.innerHTML = '⚠️ Fill in title, start date, and due date first!';
         resultDiv.style.color = '#dc2626';
         return;
       }
 
-      // Laat loading state zien
-      resultDiv.innerHTML = 'AI is thinking...';
+      resultDiv.innerHTML = '⏳ AI is thinking...';
       resultDiv.style.color = '#2563eb';
 
       try {
-        // Stuur een POST request naar onze AI endpoint
         const response = await fetch('{{ url_for("predict_duration") }}', {
           method: 'POST',
           headers: {
@@ -80,18 +77,16 @@
         const data = await response.json();
 
         if (response.ok) {
-          // Success! Vul de hours field in
           const predicted = data.predicted_hours;
           document.getElementById('total_hours').value = predicted;
-          resultDiv.innerHTML = `${data.message}`;
+          resultDiv.innerHTML = `✅ ${data.message}`;
           resultDiv.style.color = '#15803d';
         } else {
-          // Error van de AI
-          resultDiv.innerHTML = `${data.error}`;
+          resultDiv.innerHTML = `⚠️ ${data.error}`;
           resultDiv.style.color = '#dc2626';
         }
       } catch (error) {
-        resultDiv.innerHTML = `Error: ${error.message}`;
+        resultDiv.innerHTML = `❌ Error: ${error.message}`;
         resultDiv.style.color = '#dc2626';
       }
     });
